@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="sr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dužnici – Profesionalno</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- FIREBASE SDKs (Required for Cloud Sync) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    :root {
+      /* Color Palette */
+      --primary: #4F46E5;
+      --primary-hover: #4338ca;
+      --secondary: #64748b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --background: #f3f4f6;
+      --surface: #ffffff;
+      --text-main: #111827;
+      --text-secondary: #6b7280;
+      --border: #e5e7eb;
+
+      /* Spacing & Radius */
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+      /* Transitions */
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      outline: none;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--background);
+      color: var(--text-main);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: 40px;
+    }
+
+    /* Layout */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 0 4px;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    /* Sync Status Indicator */
+    .sync-status {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #e2e8f0;
+      color: #64748b;
+    }
+
+    .sync-status.connected {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .sync-status.offline {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Dashboard Stats */
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 8px;
+      color: var(--text-main);
+    }
+
+    .stat-value.danger {
+      color: var(--danger);
+    }
+
+    .stat-value.success {
+      color: var(--success);
+    }
+
+    /* Controls: Search & Add */
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .search-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      font-size: 15px;
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      width: 18px;
+      height: 18px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-danger {
+      background-color: #fef2f2;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+
+    .btn-danger:hover {
+      background-color: #fee2e2;
+    }
+
+    /* Debtors List */
+    .debtors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .debtor-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .debtor-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: #d1d5db;
+    }
+
+    .card-header {
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--background);
+    }
+
+    .debtor-info h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .debtor-info .meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .debtor-info .note {
+      font-style: italic;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .debt-badge {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      background: #f3f4f6;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .debt-badge.owing {
+      background: #fef2f2;
+      color: var(--danger);
+      border: 1px solid #fee2e2;
+    }
+
+    .debt-badge.paid {
+      background: #ecfdf5;
+      color: var(--success);
+      border: 1px solid #d1fae5;
+    }
+
+    .card-actions {
+      padding: 12px 20px;
+      background: #f9fafb;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .btn-icon {
+      padding: 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: white;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:hover {
+      border-color: var(--secondary);
+      color: var(--text-main);
+    }
+
+    .btn-icon.delete:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: #fef2f2;
+    }
+
+    /* History (Expandable) */
+    .history-section {
+      background: #fafafa;
+      border-top: 1px solid var(--border);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+
+    .history-section.open {
+      max-height: 300px;
+      overflow-y: auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-list {
+      padding: 0 20px;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .h-date {
+      color: var(--text-secondary);
+      display: block;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    .h-desc {
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    .h-amount {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .h-amount.debt {
+      color: var(--danger);
+    }
+
+    .h-amount.pay {
+      color: var(--success);
+    }
+
+    /* Floating Labels */
+    .input-group {
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-main);
+    }
+
+    .input-group input,
+    .input-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .input-group input:focus,
+    .input-group textarea:focus {
+      border-color: var(--primary);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .input-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--surface);
+      width: 90%;
+      max-width: 450px;
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(20px);
+      transition: var(--transition);
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0);
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text-main);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    /* Utils */
+    .hidden {
+      display: none !important;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .no-data svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Veresija
+      </div>
+
+      <!-- Sync Status -->
+      <div id="syncStatus" class="sync-status">
+        <div class="status-dot"></div>
+        <span id="syncText">Lokalni Režim</span>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="dashboard">
+      <div class="stat-card">
+        <div class="stat-label">Ukupan Dug</div>
+        <div class="stat-value danger" id="totalDebtDisplay">0.00 KM</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Broj Dužnika</div>
+        <div class="stat-value" id="totalDebtorsDisplay">0</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="search-wrapper">
+        <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Pretraži po imenu..." autocomplete="off">
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        Novi Dužnik
+      </button>
+    </div>
+
+    <!-- List -->
+    <div id="debtorsList" class="debtors-list"></div>
+
+    <div id="emptyState" class="no-data hidden">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+      <p>Nema pronađenih dužnika.</p>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD DEBTOR -->
+  <div class="modal-overlay" id="modalAddDebtor">
+    <div class="modal">
+      <div class="modal-title">Dodaj Novog Dužnika</div>
+      <div class="input-group">
+        <label>Ime i Prezime</label>
+        <input type="text" id="newDebtorName" placeholder="npr. Marko Marković">
+      </div>
+      <div class="input-group">
+        <label>Telefon (opciono)</label>
+        <input type="tel" id="newDebtorPhone" placeholder="npr. 061 123 456">
+      </div>
+      <div class="input-group">
+        <label>Napomena</label>
+        <textarea id="newDebtorNote" placeholder="Kratka beleška..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger"
+          style="background:transparent; border:1px solid var(--border); color:var(--text-secondary);"
+          onclick="closeModal('modalAddDebtor')">Otkaži</button>
+        <button class="btn btn-primary" onclick="confirmAddDebtor()">Sačuvaj</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TRANSACTION -->
+  <div class="modal-overlay" id="modalTransaction">
+    <div class="modal">
+      <div class="modal-title" id="transModalTitle">Nova Transakcija</div>
+      <p id="transModalSubtitle" style="margin-bottom: 20px; color: var(--text-secondary); font-size: 14px;"></p>
+
+      <input type="hidden" id="transDebtorId">
+      <input type="hidden" id="transType">
+
+      <div class="input-group">
+        <label>Iznos (KM)</label>
+        <input type="number" id="transAmount" step="0.50" placeholder="0.00"
+          onkeydown="if(event.key === 'Enter') confirmTransaction()">
+      </div>
+      <div class="input-group">
+        <label>Opis (opciono)</label>
+        <input type="text" id="transDesc" placeholder="npr. Hleb, Mleko"
+          onkeydown="if(event.key === 'Enter') confirmTransaction()">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger"
+          style="background:transparent; border:1px solid var(--border); color:var(--text-secondary);"
+          onclick="closeModal('modalTransaction')">Otkaži</button>
+        <button class="btn btn-primary" id="transConfirmBtn" onclick="confirmTransaction()">Potvrdi</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // ⚙️ KONFIGURACIJA BAZE (FIREBASE)
+    // Ovde nalepite vašu Firebase konfiguraciju
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCXMLwoU2m-xCtzwJbnIN0cf9cCAext05o",
+      authDomain: "duznici-c8fac.firebaseapp.com",
+      databaseURL: "https://duznici-c8fac-default-rtdb.firebaseio.com",
+      projectId: "duznici-c8fac",
+      storageBucket: "duznici-c8fac.firebasestorage.app",
+      messagingSenderId: "903185532886",
+      appId: "1:903185532886:web:18962700bf4eb8c7954677",
+      measurementId: "G-0ZE21F5YRD"
+    };
+    // ==========================================
+
+    // --- STATE MANAGEMENT ---
+    const STORAGE_KEY = "veresija_duznici_v1";
+    let state = [];
+    let isCloudConnected = false;
+    let dbRef = null;
+
+    function init() {
+      // 1. Check if Firebase is configured
+      if (firebaseConfig.apiKey) {
+        try {
+          firebase.initializeApp(firebaseConfig);
+          const db = firebase.database();
+          dbRef = db.ref('duznici_data');
+
+          // Listen for changes
+          dbRef.on('value', (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+              state = val;
+            } else {
+              // First time cloud sync: if empty, maybe upload local?
+              // For now, just set empty array
+              if (state.length > 0 && confirm("Pronađena je lokalna verzija podataka, a baza je prazna. Da li želite da otpremite lokalne podatke u bazu?")) {
+                saveData(); // Push local to cloud
+              } else {
+                state = [];
+              }
+            }
+            updateStatus(true);
+            render();
+          }, (error) => {
+            console.error("Firebase error:", error);
+            updateStatus(false);
+          });
+
+          isCloudConnected = true;
+        } catch (e) {
+          console.error("Firebase init failed:", e);
+          loadLocalData();
+        }
+      } else {
+        // Fallback to LocalStorage
+        loadLocalData();
+      }
+
+      render();
+    }
+
+    function updateStatus(online) {
+      const el = document.getElementById('syncStatus');
+      const txt = document.getElementById('syncText');
+      if (online) {
+        el.classList.add('connected');
+        el.classList.remove('offline');
+        txt.textContent = 'Online / Sinhronizovano';
+      } else {
+        el.classList.add('offline');
+        el.classList.remove('connected');
+        txt.textContent = 'Offline / Lokalno';
+      }
+    }
+
+    function loadLocalData() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        state = [];
+      } else {
+        try {
+          state = JSON.parse(raw);
+        } catch (e) {
+          state = [];
+        }
+      }
+      updateStatus(false);
+    }
+
+    function saveData() {
+      if (isCloudConnected && dbRef) {
+        // Save to Cloud
+        dbRef.set(state).catch(e => alert("Greška pri čuvanju na Cloud: " + e.message));
+      } else {
+        // Save Locally
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+      render();
+    }
+
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    function getBalance(debtor) {
+      if (!debtor.transactions) return 0;
+      return debtor.transactions.reduce((acc, t) => {
+        const amt = parseFloat(t.amount) || 0;
+        return t.type === 'DEBT' ? acc + amt : acc - amt;
+      }, 0);
+    }
+
+    // --- RENDER ---
+    function render() {
+      const filter = document.getElementById('searchInput').value.toLowerCase();
+      const listEl = document.getElementById('debtorsList');
+      const emptyEl = document.getElementById('emptyState');
+
+      // Stats
+      let totalDebt = 0;
+      // Safety check for array
+      if (!Array.isArray(state)) state = [];
+
+      state.forEach(d => {
+        totalDebt += getBalance(d);
+      });
+
+      document.getElementById('totalDebtDisplay').textContent = totalDebt.toLocaleString('sr-RS', { minimumFractionDigits: 2 }) + ' KM';
+      document.getElementById('totalDebtorsDisplay').textContent = state.length;
+
+      listEl.innerHTML = '';
+
+      const filtered = state.filter(d => d.name.toLowerCase().includes(filter));
+
+      if (filtered.length === 0) {
+        emptyEl.classList.remove('hidden');
+      } else {
+        emptyEl.classList.add('hidden');
+
+        // Sort logic
+        filtered.sort((a, b) => {
+          const balA = getBalance(a);
+          const balB = getBalance(b);
+          if (balA !== balB) return balB - balA;
+          return a.name.localeCompare(b.name);
+        });
+
+        filtered.forEach(d => {
+          const balance = getBalance(d);
+          const card = document.createElement('div');
+          card.className = 'debtor-card';
+          card.dataset.id = d.id;
+
+          let statusClass = 'paid';
+          let statusText = 'Nema duga';
+
+          if (balance > 0.05) {
+            statusClass = 'owing';
+            statusText = `Duguje: ${balance.toFixed(2)} KM`;
+          } else if (balance < -0.05) {
+            statusClass = 'paid';
+            statusText = `Preplaćeno: ${Math.abs(balance).toFixed(2)} KM`;
+          }
+
+          const transactions = d.transactions || [];
+          const lastTrans = transactions.length > 0 ? transactions[transactions.length - 1] : null;
+          const lastDate = lastTrans ? new Date(lastTrans.date).toLocaleDateString('sr-RS') : 'Nema aktivnosti';
+
+          card.innerHTML = `
+          <div class="card-header">
+            <div class="debtor-info">
+              <h3>${d.name}</h3>
+              <div class="meta">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                ${d.phone || 'Nema telefona'}
+                <span style="margin: 0 6px; color:#ddd;">|</span>
+                <span title="Poslednja aktivnost">${lastDate}</span>
+              </div>
+              ${d.note ? `<div class="note">${d.note}</div>` : ''}
+            </div>
+            <div class="debt-badge ${statusClass}">${statusText}</div>
+          </div>
+          
+          <div class="history-section" id="history-${d.id}">
+             <div class="history-list">
+               ${renderHistoryLines(transactions)}
+             </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn-icon" onclick="toggleHistory('${d.id}')" title="Istorija">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span style="font-size:12px; margin-left:4px;">Istorija</span>
+            </button>
+            <div style="flex:1;"></div>
+            <button class="btn btn-primary" style="padding: 8px 12px; font-size: 13px; background: #ef4444; border:none; box-shadow:none;" onclick="openTransactionModal('${d.id}', 'DEBT')">
+              + Dug
+            </button>
+            <button class="btn btn-primary" style="padding: 8px 12px; font-size: 13px; background: #10b981; border:none; box-shadow:none;" onclick="openTransactionModal('${d.id}', 'PAYMENT')">
+              + Uplata
+            </button>
+            <button class="btn-icon delete" onclick="deleteDebtor('${d.id}')" title="Obriši" style="margin-left:8px;">
+               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        `;
+          listEl.appendChild(card);
+        });
+      }
+    }
+
+    function renderHistoryLines(transactions) {
+      if (!transactions || transactions.length === 0) return '<div style="padding:15px; font-size:13px; color:#aaa; text-align:center;">Nema prethodnih transakcija.</div>';
+
+      // Create a copy and sort by date descending
+      const sorted = [...transactions].sort((a, b) => b.date - a.date);
+
+      return sorted.map(t => {
+        const typeLabel = t.type === 'DEBT' ? 'Zaduženje' : 'Uplata';
+        const amountClass = t.type === 'DEBT' ? 'debt' : 'pay';
+        const sign = t.type === 'DEBT' ? '+' : '-';
+        const d = new Date(t.date);
+        const dateStr = d.toLocaleDateString('sr-RS') + ' ' + d.toLocaleTimeString('sr-RS', { hour: '2-digit', minute: '2-digit' });
+        const amt = parseFloat(t.amount) || 0;
+
+        return `
+        <div class="history-item">
+          <div>
+            <span class="h-date">${dateStr}</span>
+            <span class="h-desc">${t.description ? t.description : typeLabel}</span>
+          </div>
+          <div class="h-amount ${amountClass}">${sign}${amt.toFixed(2)} KM</div>
+        </div>
+      `;
+      }).join('');
+    }
+
+    function toggleHistory(id) {
+      const el = document.getElementById(`history-${id}`);
+      if (el.classList.contains('open')) {
+        el.classList.remove('open');
+      } else {
+        el.classList.add('open');
+      }
+    }
+
+    // --- ACTIONS ---
+
+    function openModal(id) {
+      const el = document.getElementById(id);
+      el.classList.add('active');
+      setTimeout(() => {
+        const input = el.querySelector('input, textarea');
+        if (input) input.focus();
+      }, 100);
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function openAddModal() {
+      openModal('modalAddDebtor');
+    }
+
+    // Add Debtor
+    function confirmAddDebtor() {
+      const name = document.getElementById('newDebtorName').value.trim();
+      if (!name) {
+        alert('Ime je obavezno!');
+        return;
+      }
+      const phone = document.getElementById('newDebtorPhone').value.trim();
+      const note = document.getElementById('newDebtorNote').value.trim();
+
+      state.push({
+        id: generateId(),
+        name,
+        phone,
+        note,
+        transactions: []
+      });
+
+      saveData();
+      closeModal('modalAddDebtor');
+
+      // Clear inputs
+      document.getElementById('newDebtorName').value = '';
+      document.getElementById('newDebtorPhone').value = '';
+      document.getElementById('newDebtorNote').value = '';
+    }
+
+    // Transaction
+    function openTransactionModal(id, type) {
+      const debtor = state.find(d => d.id === id);
+      if (!debtor) return;
+
+      document.getElementById('transDebtorId').value = id;
+      document.getElementById('transType').value = type;
+
+      const titleEl = document.getElementById('transModalTitle');
+      const subEl = document.getElementById('transModalSubtitle');
+      const btn = document.getElementById('transConfirmBtn');
+
+      if (type === 'DEBT') {
+        titleEl.textContent = 'Novo Zaduženje';
+        titleEl.style.color = 'var(--danger)';
+        subEl.textContent = `Dodavanje duga za korisnika: ${debtor.name}`;
+        btn.style.backgroundColor = 'var(--danger)';
+        btn.textContent = 'Zaduži';
+      } else {
+        titleEl.textContent = 'Nova Uplata';
+        titleEl.style.color = 'var(--success)';
+        subEl.textContent = `Evidentiraj uplatu od korisnika: ${debtor.name}`;
+        btn.style.backgroundColor = 'var(--success)';
+        btn.textContent = 'Uplati';
+      }
+
+      document.getElementById('transAmount').value = '';
+      document.getElementById('transDesc').value = '';
+      openModal('modalTransaction');
+    }
+
+    function confirmTransaction() {
+      const id = document.getElementById('transDebtorId').value;
+      const type = document.getElementById('transType').value;
+      const amountVal = document.getElementById('transAmount').value;
+      const desc = document.getElementById('transDesc').value.trim();
+
+      const amount = parseFloat(amountVal);
+      if (isNaN(amount) || amount <= 0) {
+        alert('Molimo unesite ispravan iznos (veći od 0).');
+        return;
+      }
+
+      const debtor = state.find(d => d.id === id);
+      if (debtor) {
+        if (!debtor.transactions) debtor.transactions = [];
+        debtor.transactions.push({
+          id: generateId(),
+          date: Date.now(),
+          type,
+          amount,
+          description: desc
+        });
+        saveData();
+        closeModal('modalTransaction');
+      }
+    }
+
+    function deleteDebtor(id) {
+      if (confirm('Da li ste sigurni da želite obrisati ovog dužnika i svu istoriju?')) {
+        state = state.filter(d => d.id !== id);
+        saveData();
+      }
+    }
+
+    // Listeners
+    document.getElementById('searchInput').addEventListener('input', render);
+
+    // Close modals on outside click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('active');
+        }
+      });
+    });
+
+    // Init
+    init();
+
+  </script>
+</body>
+
+</html>
