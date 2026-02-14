@@ -715,12 +715,19 @@
     }
 
     function saveData() {
+      // Always save locally first as a backup
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
       if (isCloudConnected && dbRef) {
         // Save to Cloud
-        dbRef.set(state).catch(e => alert("Greška pri čuvanju na Cloud: " + e.message));
-      } else {
-        // Save Locally
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        dbRef.set(state).catch(e => {
+          console.error("Cloud save failed:", e);
+          if (e.message.includes("permission_denied") || e.message.includes("Permission denied")) {
+            alert("GREŠKA: Pristup bazi odbijen (Permission Denied).\n\nMolimo provjerite 'Rules' na Firebase konzoli. Podaci su privremeno sačuvani samo na ovom uređaju.");
+          } else {
+            alert("Greška pri čuvanju na Cloud: " + e.message);
+          }
+        });
       }
       render();
     }
